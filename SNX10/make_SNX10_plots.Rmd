@@ -1,0 +1,167 @@
+---
+title: "SNX10 Figures"
+author: "Grace Hansen"
+date: "02/08/2021"
+output: pdf_document
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '~/medusa/papers/TWAS/SNX10')
+library(data.table)
+library(tidyverse)
+pony_colors<-fread("~/medusa/papers/TWAS/pony_palette.txt")
+########## For color manipulation of graph ###############
+darken <- function(color, factor=1.2){
+  col <- col2rgb(color)
+  col <- col/factor
+  col <- rgb(t(col), maxColorValue=255)
+  col
+}
+lighten <- function(color, factor=0.8){
+  col <- col2rgb(color)
+  col <- col/factor
+  for (i in 1:length(col)) { if ( col[i] > 255 ) { col[i] = 255 } }
+  col <- rgb(t(col), maxColorValue=255)
+  col
+}
+#########################################################
+```
+
+## rtPCR boxplots
+
+Showing *Adipoq* as example:
+
+```{r rtPCR,echo=FALSE}
+dat<-fread("shRNA_qPCR.txt")
+dat<-as.data.frame(dat)
+dat$condition<-factor(dat$condition,levels=c("Undiff","Diff","Diff+Scramble","Diff+ShRNA-SNX10"))
+dat$Experiment<-factor(dat$Experiment)
+
+plot_gene<-function(gene) {
+  plot_dat<-dat[dat$gene==gene,] %>% group_by(condition) %>% summarize(meanFC=mean(FC),sdFC=sd(FC))
+  plot_dat<-plot_dat[plot_dat$condition!="Undiff",]
+  expt_dat<-dat[dat$gene==gene,] %>% group_by(Experiment,condition) %>% summarize(meanFC=mean(FC),sdFC=sd(FC))
+  expt_dat<-expt_dat[expt_dat$condition!="Undiff",]
+  G<-ggplot()+
+    geom_col(data=plot_dat,aes(x=condition,y=meanFC,fill = condition))+
+    #geom_errorbar(data=plot_dat,aes(x=condition,ymin=meanFC-sdFC,ymax=meanFC+sdFC))+
+    geom_point(data=expt_dat,aes(x=condition,y=meanFC,shape=Experiment),size=3)+
+    scale_y_continuous(name="Fold Change from \nUndifferentiated")+
+    scale_x_discrete(name="",labels=c("Differentiated","Diff + Scramble","Diff + SNX10 shRNA"))+
+    scale_fill_manual(values=c(rgb(pony_colors[6,1:3]),rgb(pony_colors[5,1:3]),rgb(pony_colors[10,1:3])))+
+    theme_minimal()+
+    theme(axis.title=element_text(size=16),
+          axis.text=element_text(size=12),
+          axis.text.x=element_text(angle=-45),
+          legend.position=c(0.66,0.82),
+          legend.title=element_text(size=12),
+          legend.text=element_text(size=12))+
+    guides(fill=FALSE)
+  return(G)
+}
+
+get_pvals<-function(gene) {
+  dat=dat[dat$gene==gene,] %>% group_by(condition,Experiment) %>% summarize(meanDCT=mean(DCT))
+  scramble_vs_diff<-t.test(dat$meanDCT[dat$condition=="Diff"],dat$meanDCT[dat$condition=="Diff+Scramble"])$p.value
+  SNX10_vs_diff<-t.test(dat$meanDCT[dat$condition=="Diff"],dat$meanDCT[dat$condition=="Diff+ShRNA-SNX10"])$p.value
+  scramble_vs_SNX10<-t.test(dat$meanDCT[dat$condition=="Diff+Scramble"],dat$meanDCT[dat$condition=="Diff+ShRNA-SNX10"])$p.value
+  thresh=0.05/3 #Bonferroni correction for 3 tests
+  scramble_vs_diff_sig<-scramble_vs_diff<thresh
+  SNX10_vs_diff_sig<-SNX10_vs_diff<thresh
+  scramble_vs_SNX10_sig<-scramble_vs_SNX10<thresh
+  write(paste(gene,scramble_vs_diff,SNX10_vs_diff,scramble_vs_SNX10,scramble_vs_diff_sig,SNX10_vs_diff_sig,scramble_vs_SNX10_sig,sep='\t'),
+        file="shRNA_qPCR_pvals.txt",append=TRUE)
+}
+
+
+#write(paste("gene","scramble_vs_diff","SNX10_vs_diff","scramble_vs_SNX10","scramble_vs_diff_sig","SNX10_vs_diff_sig","scramble_vs_SNX10_sig",sep='\t'),
+#      file="shRNA_qPCR_pvals.txt")
+#for (gene in c("SNX10","FABP4","PPARG","ADIPOQ")) {
+#  G<-plot_gene(gene)
+#  ggsave(paste(gene,"_shRNA.pdf",sep=''),G,device="pdf",width=2,height=3)
+#  get_pvals(gene)
+#}
+
+G
+```
+
+## DEXA scanning boxplots
+
+```{r DEXA,echo=FALSE}
+dat<-fread("HFD_data.txt")
+dat$sex_cond=paste(dat$Sex,dat$Status,sep=',')
+dat<-as.data.frame(dat)
+dat[dat$Usable!="Y",]<-NA
+dat<-dat[!(is.na(dat$Mouse)),]
+
+###### Start text files for p-values and means
+write(paste("value","FC_vs_FKO","MC_vs_MKO","MKO_vs_FKO","FC_vs_FKO_sig","MC_vs_MKO_sig","MKO_vs_FKO_sig",sep='\t'),file="SNX10_HFD_pvals.txt")
+write(paste("value","FC_mean","FKO_mean","MC_mean","MKO_mean",sep='\t'),file="SNX10_HFD_means.txt")
+
+###### Function for plotting traits
+plot_trait<-function(dat,trait){
+  means=dat %>% group_by(sex_cond) %>% summarize(mean := mean(!! rlang::sym(trait)))
+  write(paste(c(trait,unlist(means[,2])),sep='\t'),file="SNX10_HFD_means.txt",append=TRUE)
+  
+  i=which(colnames(dat)==trait)
+  FC_vs_FKO<-t.test(dat[dat$sex_cond=="F,C",i],dat[dat$sex_cond=="F,KO",i])$p.value
+  MC_vs_MKO<-t.test(dat[dat$sex_cond=="M,C",i],dat[dat$sex_cond=="M,KO",i])$p.value
+  MKO_vs_FKO<-t.test(dat[dat$sex_cond=="M,KO",i],dat[dat$sex_cond=="F,KO",i])$p.value
+  thresh=0.05/3 #Bonferroni correction for 3 tests (all pairwise tests)
+  FC_vs_FKO_sig<-FC_vs_FKO<thresh
+  MC_vs_MKO_sig<-MC_vs_MKO<thresh
+  MKO_vs_FKO_sig<-MKO_vs_FKO<thresh
+  write(paste(trait,FC_vs_FKO,MC_vs_MKO,MKO_vs_FKO,FC_vs_FKO_sig,MC_vs_MKO_sig,MKO_vs_FKO_sig,sep='\t'),
+        file="SNX10_HFD_pvals.txt",append=TRUE)
+  
+  traitstr=paste("`",trait,"`",sep='')
+  M<-ggplot(dat)+
+    geom_boxplot(aes_string(x="sex_cond",y=traitstr,fill="sex_cond"))+
+    geom_point(aes_string(x="sex_cond",y=traitstr))+
+    scale_x_discrete(name="")+
+    scale_y_continuous(name=trait)+
+    expand_limits(y=0)+
+    scale_fill_manual(values=c(rgb(pony_colors[10,1:3]),"gray30",rgb(pony_colors[14,1:3]),"gray70"))+
+    theme_minimal()+
+    theme(axis.title=element_text(size=14),
+        axis.text=element_text(size=12))+
+    theme(legend.position="none")
+
+  ggsave(paste("SNX10_HFD_",gsub("(%)","",gsub(" ","",trait,fixed=TRUE),fixed=TRUE),".pdf",sep=''),M,device="pdf",width=3,height=2.5)
+  
+  return(M)
+}
+
+###### Make graphs and do significance testing for traits
+for (i in 9:14) {
+  plot_trait(dat,colnames(dat)[i])
+}
+```
+
+## Glucose tolerance test line plot
+```{r gtt, echo=FALSE}
+dat<-fread("gtt_dummy_data.txt")
+dat<-as.data.frame(dat)
+dat$sex_cond=paste(dat$sex,dat$condition,sep='_')
+group_dat<-dat %>% group_by(time,sex_cond) %>% summarize(mean=mean(`mg/dL`),.keep_all=TRUE)
+group_dat$condition<-factor(group_dat$sex_cond,levels=c("F_C","M_C","F_KO","M_KO"))
+dat$condition<-factor(dat$sex_cond,levels=c("F_C","M_C","F_KO","M_KO"))
+
+G<-ggplot()+
+  geom_line(data=group_dat,aes(x=time,y=mean,color=sex_cond))+
+  geom_point(data=dat,aes(x=time,y=`mg/dL`,color = sex_cond))+
+  scale_color_manual(values=c(rgb(pony_colors[10,1:3]),"gray30",rgb(pony_colors[14,1:3]),"gray70"))+
+  theme_minimal()+
+  scale_y_continuous(name="mg/dL")+
+  scale_x_continuous(name="Minutes")+
+  theme(
+    axis.text=element_text(size=16),
+    axis.title=element_text(size=18),
+    legend.title=element_blank(),
+    legend.text=element_text(size=16))
+
+ggsave("SNX10_HFD_gtt.pdf",G,device="pdf",width=6,height=2.75)
+G
+```
+
