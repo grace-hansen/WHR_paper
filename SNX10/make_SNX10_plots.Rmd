@@ -45,7 +45,7 @@ plot_gene<-function(gene) {
   expt_dat<-expt_dat[expt_dat$condition!="Undiff",]
   G<-ggplot()+
     geom_col(data=plot_dat,aes(x=condition,y=meanFC,fill = condition))+
-    #geom_errorbar(data=plot_dat,aes(x=condition,ymin=meanFC-sdFC,ymax=meanFC+sdFC))+
+    geom_errorbar(data=plot_dat,aes(x=condition,ymin=meanFC-sdFC,ymax=meanFC+sdFC))+
     geom_point(data=expt_dat,aes(x=condition,y=meanFC,shape=Experiment),size=3)+
     scale_y_continuous(name="Fold Change from \nUndifferentiated")+
     scale_x_discrete(name="",labels=c("Differentiated","Diff + Scramble","Diff + SNX10 shRNA"))+
@@ -75,15 +75,14 @@ get_pvals<-function(gene) {
 }
 
 
-#write(paste("gene","scramble_vs_diff","SNX10_vs_diff","scramble_vs_SNX10","scramble_vs_diff_sig","SNX10_vs_diff_sig","scramble_vs_SNX10_sig",sep='\t'),
-#      file="shRNA_qPCR_pvals.txt")
-#for (gene in c("SNX10","FABP4","PPARG","ADIPOQ")) {
-#  G<-plot_gene(gene)
-#  ggsave(paste(gene,"_shRNA.pdf",sep=''),G,device="pdf",width=2,height=3)
-#  get_pvals(gene)
-#}
+write(paste("gene","scramble_vs_diff","SNX10_vs_diff","scramble_vs_SNX10","scramble_vs_diff_sig","SNX10_vs_diff_sig","scramble_vs_SNX10_sig",sep='\t'),
+      file="shRNA_qPCR_pvals.txt")
+for (gene in c("SNX10","FABP4","PPARG","ADIPOQ")) {
+  G<-plot_gene(gene)
+  ggsave(paste(gene,"_shRNA.pdf",sep=''),G,device="pdf",width=2,height=3)
+  get_pvals(gene)
+}
 
-G
 ```
 
 ## DEXA scanning boxplots
