@@ -63,23 +63,36 @@ plot_gene<-function(gene) {
 
 get_pvals<-function(gene) {
   dat=dat[dat$gene==gene,] %>% group_by(condition,Experiment) %>% summarize(meanDCT=mean(DCT))
-  scramble_vs_diff<-t.test(dat$meanDCT[dat$condition=="Diff"],dat$meanDCT[dat$condition=="Diff+Scramble"])$p.value
-  SNX10_vs_diff<-t.test(dat$meanDCT[dat$condition=="Diff"],dat$meanDCT[dat$condition=="Diff+ShRNA-SNX10"])$p.value
-  scramble_vs_SNX10<-t.test(dat$meanDCT[dat$condition=="Diff+Scramble"],dat$meanDCT[dat$condition=="Diff+ShRNA-SNX10"])$p.value
+  #Statistics
+  scramble_vs_diffp<-t.test(dat$meanDCT[dat$condition=="Diff"],dat$meanDCT[dat$condition=="Diff+Scramble"])$p.value
+  SNX10_vs_diffp<-t.test(dat$meanDCT[dat$condition=="Diff"],dat$meanDCT[dat$condition=="Diff+ShRNA-SNX10"])$p.value
+  scramble_vs_SNX10p<-t.test(dat$meanDCT[dat$condition=="Diff+Scramble"],dat$meanDCT[dat$condition=="Diff+ShRNA-SNX10"])$p.value
+  scramble_vs_difft<-t.test(dat$meanDCT[dat$condition=="Diff"],dat$meanDCT[dat$condition=="Diff+Scramble"])$statistic
+  SNX10_vs_difft<-t.test(dat$meanDCT[dat$condition=="Diff"],dat$meanDCT[dat$condition=="Diff+ShRNA-SNX10"])$statistic
+  scramble_vs_SNX10t<-t.test(dat$meanDCT[dat$condition=="Diff+Scramble"],dat$meanDCT[dat$condition=="Diff+ShRNA-SNX10"])$statistic
+  scramble_vs_diffdf<-t.test(dat$meanDCT[dat$condition=="Diff"],dat$meanDCT[dat$condition=="Diff+Scramble"])$parameter
+  SNX10_vs_diffdf<-t.test(dat$meanDCT[dat$condition=="Diff"],dat$meanDCT[dat$condition=="Diff+ShRNA-SNX10"])$parameter
+  scramble_vs_SNX10df<-t.test(dat$meanDCT[dat$condition=="Diff+Scramble"],dat$meanDCT[dat$condition=="Diff+ShRNA-SNX10"])$parameter
+  scramble_vs_diffCIl<-t.test(dat$meanDCT[dat$condition=="Diff"],dat$meanDCT[dat$condition=="Diff+Scramble"])$conf.int[1]
+  SNX10_vs_diffCIl<-t.test(dat$meanDCT[dat$condition=="Diff"],dat$meanDCT[dat$condition=="Diff+ShRNA-SNX10"])$conf.int[1]
+  scramble_vs_SNX10CIl<-t.test(dat$meanDCT[dat$condition=="Diff+Scramble"],dat$meanDCT[dat$condition=="Diff+ShRNA-SNX10"])$conf.int[1]
+  scramble_vs_diffCIu<-t.test(dat$meanDCT[dat$condition=="Diff"],dat$meanDCT[dat$condition=="Diff+Scramble"])$conf.int[2]
+  SNX10_vs_diffCIu<-t.test(dat$meanDCT[dat$condition=="Diff"],dat$meanDCT[dat$condition=="Diff+ShRNA-SNX10"])$conf.int[2]
+  scramble_vs_SNX10CIu<-t.test(dat$meanDCT[dat$condition=="Diff+Scramble"],dat$meanDCT[dat$condition=="Diff+ShRNA-SNX10"])$conf.int[2]
   thresh=0.05/3 #Bonferroni correction for 3 tests
-  scramble_vs_diff_sig<-scramble_vs_diff<thresh
-  SNX10_vs_diff_sig<-SNX10_vs_diff<thresh
-  scramble_vs_SNX10_sig<-scramble_vs_SNX10<thresh
-  write(paste(gene,scramble_vs_diff,SNX10_vs_diff,scramble_vs_SNX10,scramble_vs_diff_sig,SNX10_vs_diff_sig,scramble_vs_SNX10_sig,sep='\t'),
+  scramble_vs_diff_sig<-scramble_vs_diffp<thresh
+  SNX10_vs_diff_sig<-SNX10_vs_diffp<thresh
+  scramble_vs_SNX10_sig<-scramble_vs_SNX10p<thresh
+  write(paste(gene,scramble_vs_diffp,SNX10_vs_diffp,scramble_vs_SNX10p,scramble_vs_diff_sig,SNX10_vs_diff_sig,scramble_vs_SNX10_sig,scramble_vs_difft,SNX10_vs_difft,scramble_vs_SNX10t,scramble_vs_diffdf,SNX10_vs_diffdf,scramble_vs_SNX10df,scramble_vs_diffCIl,SNX10_vs_diffCIl,scramble_vs_SNX10CIl,scramble_vs_diffCIu,SNX10_vs_diffCIu,scramble_vs_SNX10CIu,sep='\t'),
         file="shRNA_qPCR_pvals.txt",append=TRUE)
 }
 
 
-write(paste("gene","scramble_vs_diff","SNX10_vs_diff","scramble_vs_SNX10","scramble_vs_diff_sig","SNX10_vs_diff_sig","scramble_vs_SNX10_sig",sep='\t'),
+write(paste("gene","scramble_vs_diff","SNX10_vs_diff","scramble_vs_SNX10","scramble_vs_diff_sig","SNX10_vs_diff_sig","scramble_vs_SNX10_sig","scramble_vs_diff_t","SNX10_vs_diff_t","scramble_vs_SNX10_t","scramble_vs_diff_df","SNX10_vs_diff_df","scramble_vs_SNX10_df","scramble_vs_diff_CIl","SNX10_vs_diff_CIl","scramble_vs_SNX10_CIl","scramble_vs_diff_CIu","SNX10_vs_diff_CIu","scramble_vs_SNX10_CIu",sep='\t'),
       file="shRNA_qPCR_pvals.txt")
 for (gene in c("SNX10","FABP4","PPARG","ADIPOQ")) {
-  G<-plot_gene(gene)
-  ggsave(paste(gene,"_shRNA.pdf",sep=''),G,device="pdf",width=2,height=3)
+  #G<-plot_gene(gene)
+  #ggsave(paste(gene,"_shRNA.pdf",sep=''),G,device="pdf",width=2,height=3)
   get_pvals(gene)
 }
 
@@ -95,7 +108,7 @@ dat[dat$Usable!="Y",]<-NA
 dat<-dat[!(is.na(dat$Mouse)),]
 
 ###### Start text files for p-values and means
-write(paste("value","FC_vs_FKO","MC_vs_MKO","MKO_vs_FKO","FC_vs_FKO_sig","MC_vs_MKO_sig","MKO_vs_FKO_sig",sep='\t'),file="SNX10_HFD_pvals.txt")
+write(paste("value","FC_vs_FKO_p","MC_vs_MKO_p","MKO_vs_FKO_p","FC_vs_FKO_sig","MC_vs_MKO_sig","MKO_vs_FKO_sig","FC_vs_FKO_t","MC_vs_MKO_t","MKO_vs_FKO_t","FC_vs_FKO_df","MC_vs_MKO_df","MKO_vs_FKO_df","FC_vs_FKO_CI_l","MC_vs_MKO_CI_l","MKO_vs_FKO_CI_l","FC_vs_FKO_CI_u","MC_vs_MKO_CI_u","MKO_vs_FKO_CI_u",sep='\t'),file="SNX10_HFD_pvals.txt")
 write(paste("value","FC_mean","FKO_mean","MC_mean","MKO_mean",sep='\t'),file="SNX10_HFD_means.txt")
 
 ###### Function for plotting traits
@@ -104,14 +117,28 @@ plot_trait<-function(dat,trait){
   write(paste(c(trait,unlist(means[,2])),sep='\t'),file="SNX10_HFD_means.txt",append=TRUE)
   
   i=which(colnames(dat)==trait)
-  FC_vs_FKO<-t.test(dat[dat$sex_cond=="F,C",i],dat[dat$sex_cond=="F,KO",i])$p.value
-  MC_vs_MKO<-t.test(dat[dat$sex_cond=="M,C",i],dat[dat$sex_cond=="M,KO",i])$p.value
-  MKO_vs_FKO<-t.test(dat[dat$sex_cond=="M,KO",i],dat[dat$sex_cond=="F,KO",i])$p.value
+  #Statistics
+  FC_vs_FKOp<-t.test(dat[dat$sex_cond=="F,C",i],dat[dat$sex_cond=="F,KO",i])$p.value
+  MC_vs_MKOp<-t.test(dat[dat$sex_cond=="M,C",i],dat[dat$sex_cond=="M,KO",i])$p.value
+  MKO_vs_FKOp<-t.test(dat[dat$sex_cond=="M,KO",i],dat[dat$sex_cond=="F,KO",i])$p.value
+  FC_vs_FKOt<-t.test(dat[dat$sex_cond=="F,C",i],dat[dat$sex_cond=="F,KO",i])$statistic
+  MC_vs_MKOt<-t.test(dat[dat$sex_cond=="M,C",i],dat[dat$sex_cond=="M,KO",i])$statistic
+  MKO_vs_FKOt<-t.test(dat[dat$sex_cond=="M,KO",i],dat[dat$sex_cond=="F,KO",i])$statistic
+  FC_vs_FKOdf<-t.test(dat[dat$sex_cond=="F,C",i],dat[dat$sex_cond=="F,KO",i])$parameter
+  MC_vs_MKOdf<-t.test(dat[dat$sex_cond=="M,C",i],dat[dat$sex_cond=="M,KO",i])$parameter
+  MKO_vs_FKOdf<-t.test(dat[dat$sex_cond=="M,KO",i],dat[dat$sex_cond=="F,KO",i])$parameter
+  FC_vs_FKOCIl<-t.test(dat[dat$sex_cond=="F,C",i],dat[dat$sex_cond=="F,KO",i])$conf.int[1]
+  MC_vs_MKOCIl<-t.test(dat[dat$sex_cond=="M,C",i],dat[dat$sex_cond=="M,KO",i])$conf.int[1]
+  MKO_vs_FKOCIl<-t.test(dat[dat$sex_cond=="M,KO",i],dat[dat$sex_cond=="F,KO",i])$conf.int[1]
+  FC_vs_FKOCIu<-t.test(dat[dat$sex_cond=="F,C",i],dat[dat$sex_cond=="F,KO",i])$conf.int[2]
+  MC_vs_MKOCIu<-t.test(dat[dat$sex_cond=="M,C",i],dat[dat$sex_cond=="M,KO",i])$conf.int[2]
+  MKO_vs_FKOCIu<-t.test(dat[dat$sex_cond=="M,KO",i],dat[dat$sex_cond=="F,KO",i])$conf.int[2]
+  
   thresh=0.05/3 #Bonferroni correction for 3 tests (all pairwise tests)
-  FC_vs_FKO_sig<-FC_vs_FKO<thresh
-  MC_vs_MKO_sig<-MC_vs_MKO<thresh
-  MKO_vs_FKO_sig<-MKO_vs_FKO<thresh
-  write(paste(trait,FC_vs_FKO,MC_vs_MKO,MKO_vs_FKO,FC_vs_FKO_sig,MC_vs_MKO_sig,MKO_vs_FKO_sig,sep='\t'),
+  FC_vs_FKO_sig<-FC_vs_FKOp<thresh
+  MC_vs_MKO_sig<-MC_vs_MKOp<thresh
+  MKO_vs_FKO_sig<-MKO_vs_FKOp<thresh
+  write(paste(trait,FC_vs_FKOp,MC_vs_MKOp,MKO_vs_FKOp,FC_vs_FKO_sig,MC_vs_MKO_sig,MKO_vs_FKO_sig,FC_vs_FKOt,MC_vs_MKOt,MKO_vs_FKOt,FC_vs_FKOdf,MC_vs_MKOdf,MKO_vs_FKOdf,FC_vs_FKOCIl,MC_vs_MKOCIl,MKO_vs_FKOCIl,FC_vs_FKOCIu,MC_vs_MKOCIu,MKO_vs_FKOCIu,sep='\t'),
         file="SNX10_HFD_pvals.txt",append=TRUE)
   
   traitstr=paste("`",trait,"`",sep='')
