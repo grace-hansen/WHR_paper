@@ -3,8 +3,9 @@ library(data.table)
 library(tidyverse)
 library(yarrr) #For color funs
 library(cowplot)
+library(gridExtra)
 setwd("~/papers/TWAS/TWAS_intro/")
-pony_colors<-fread("~/papers/TWAS/pony_palette")
+pony_colors<-fread("~/medusa/papers/TWAS/pony_palette")
 
 prep_columns<-function(dat) {
   CD4<-colMeans(dat[c("CD4+ memory T-cells","CD4+ naive T-cells","CD4+ T-cells","CD4+ Tcm","CD4+ Tem"),])
@@ -125,53 +126,52 @@ pdf("~/medusa/papers/TWAS/supplement/intro/celltypes_all.pdf",width=7,height=7)
 grid.arrange(A,C,nrow=2)
 dev.off()
 
-###Plot selected celltypes
-adipose_dat<-adipose_dat[adipose_dat$celltype %in%
-  c("Preadipocytes","Adipocytes","Fibroblasts","Chondrocytes","Endothelial cells","Dendritic cells","NKT","Neurons","Astrocytes"),]
-adipose_dat<-adipose_dat[order(adipose_dat$mean_prop,decreasing=TRUE),]
-adipose_dat$celltype<-as.character(adipose_dat$celltype)
-adipose_dat$celltype<-factor(adipose_dat$celltype,levels=adipose_dat$celltype)
 
-cortex_dat<-cortex_dat[cortex_dat$celltype %in%
-                           c("Preadipocytes","Adipocytes","Fibroblasts","Chondrocytes","Endothelial cells","Dendritic cells","NKT","Neurons","Astrocytes"),]
-cortex_dat<-cortex_dat[order(cortex_dat$mean_prop,decreasing=TRUE),]
-cortex_dat$celltype<-as.character(cortex_dat$celltype)
-cortex_dat$celltype<-factor(cortex_dat$celltype,levels=adipose_dat$celltype)
+######################### Plot by sex
+# Get sex information
+#celltypes_tissue<-celltypes_tissue[,grepl("GTEX",colnames(celltypes_tissue))]
+sex<-fread("~/midway/GTEx_Analysis_2017-06-05_v8_Annotations%2FGTEx_Analysis_2017-06-05_v8_Annotations_SubjectPhenotypesDS.txt")
+sex<-sex[,c('SUBJID',"SEX")]
+subjs<-paste("GTEX",sapply(strsplit(colnames(celltypes_adipose),'-'),'[[',2),sep='-')
+sex<-sex$SEX[match(subjs,sex$SUBJID)] #In same order as GTEx samples
 
-A<-ggplot(adipose_dat,aes(x=celltype,y=mean_prop))+
-  geom_bar(aes(fill=groups),position="dodge",stat="identity")+
+props_F<-as.data.frame(t(rbind(rownames(celltypes_adipose),
+                               rowMeans(celltypes_adipose[,sex==2]),
+                               apply(celltypes_adipose[,sex==2],1,sd))),stringsAsFactors = FALSE)
+colnames(props_F)<-c("celltype","mean_prop","sd")
+props_F$mean_prop<-as.numeric(props_F$mean_prop)
+props_F$sd<-as.numeric(props_F$sd)
+props_F$celltype<-factor(props_F$celltype,levels=unique(props_F$celltype))
+props_F$sex="F"
+
+props_M<-as.data.frame(t(rbind(rownames(celltypes_adipose),
+                               rowMeans(celltypes_adipose[,sex==1]),
+                               apply(celltypes_adipose[,sex==1],1,sd))),stringsAsFactors = FALSE)
+colnames(props_M)<-c("celltype","mean_prop","sd")
+props_M$mean_prop<-as.numeric(props_M$mean_prop)
+props_M$sd<-as.numeric(props_M$sd)
+props_M$celltype<-factor(props_M$celltype,levels=unique(props_M$celltype))
+props_M$sex="M"
+
+props<-rbind(props_F,props_M)
+props$celltype<-factor(props$celltype,levels=adipose_dat$celltype)
+pdf("~/midway/xCell/adipose_subcutaneous_xCell_by_sex.pdf",width=7,height=4)
+C<-ggplot(props,aes(x=celltype,y=mean_prop,fill=sex))+
+  geom_bar(position="dodge",stat="identity")+
   geom_errorbar(aes(ymin=mean_prop-sd, ymax=mean_prop+sd), width=.2,
-                position=position_dodge(.9))+
-  theme_minimal()+
-  scale_y_continuous("Estimated cell type proportion",limits=c(-0.02,0.2))+
-  scale_fill_manual(values=c(rgb(pony_colors[5,1:3]),'gray70',rgb(pony_colors[8,1:3]),'gray70'))+
-  theme(plot.title=element_text(size=24),
-    axis.title=element_text(size=15),
-    legend.position="none",
-    axis.title.y=element_blank(),
-    panel.grid.major.y=element_blank(),
-    axis.title.x=element_text(size=20),
-    axis.text.x=element_text(size=16),
-    axis.text.y=element_text(size=20))+
-  coord_flip()
-
-C<-ggplot(cortex_dat,aes(x=celltype,y=mean_prop))+
-  geom_bar(aes(fill=groups),position="dodge",stat="identity")+
-  geom_errorbar(aes(ymin=mean_prop-sd, ymax=mean_prop+sd), width=.2,
-                position=position_dodge(.9))+
+                position=position_dodge(0.9))+
   theme_minimal()+
   scale_y_continuous("Estimated cell type proportion",limits=c(-0.05,0.75))+
-  scale_fill_manual(values=c(rgb(pony_colors[5,1:3]),'gray70',rgb(pony_colors[8,1:3]),'gray70'))+
-  theme(plot.title = element_text(size=24),
+  scale_fill_manual(values=c(rgb(pony_colors[14,1:3]),rgb(pony_colors[10,1:3])))+
+  theme(
+    plot.title = element_text(size=24),
     axis.title=element_text(size=15),
-    legend.position="none",
-    axis.title.y=element_blank(),
-    panel.grid.major.y=element_blank(),
-    axis.title.x=element_text(size=20),
-    axis.text.x=element_text(size=16),
-    axis.text.y=element_text(size=20))+
-  coord_flip()
-
-pdf("~/medusa/papers/TWAS/intro/celltypes/celltypes_selected.pdf",width=10,height=6)
-grid.arrange(A,C,nrow=1)
+    legend.position = c(0.75, 0.68),
+    legend.title=element_blank(),
+    axis.title.x=element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.text.y=element_text(size=12),
+    axis.text.x = element_text(angle = 45, hjust = 1,size=12))+
+  ggtitle(paste("Subcutaneous adipose estimated \n cell type proportions by sex",sep=''))
+C
 dev.off()
